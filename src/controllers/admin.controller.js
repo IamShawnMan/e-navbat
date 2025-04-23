@@ -9,6 +9,37 @@ import {
 } from "../utils/generate-token.js";
 
 export class AdminController {
+  async createSuperAdmin(req, res) {
+    try {
+      const { error, value } = adminValidator(req.body);
+      if (error) {
+        throw new Error(`error on creating superadmin: ${error}`);
+      }
+
+      const { username, password } = value;
+      const superadmin = await Admin.findOne({ role: "superadmin" });
+      if (superadmin) {
+        return res.status(409).json({
+          statusCode: 409,
+          message: "Super admin already exist",
+        });
+      }
+
+      const hashedPassword = await decode(password, 7);
+      const newAdmin = await Admin.create({
+        username,
+        hashedPassword,
+        role: "superadmin",
+      });
+      return res.status(201).json({
+        statusCode: 201,
+        message: "success",
+        data: newAdmin,
+      });
+    } catch (error) {
+      catchError(error, res);
+    }
+  }
   async createAdmin(req, res) {
     try {
       // console.log(req.body);
@@ -17,14 +48,15 @@ export class AdminController {
       if (error) {
         throw new Error(`error on creating admin: ${error}`);
       }
-      const { username, password, role } = value;
-      console.log(value);
+
+      const { username, password } = value;
+      const superadmin = await Admin.findOne({ role: "superadmin" });
 
       const hashedPassword = await decode(password, 7);
       const newAdmin = await Admin.create({
         username,
         hashedPassword,
-        role,
+        role: "admin",
       });
       return res.status(201).json({
         statusCode: 201,
@@ -88,6 +120,12 @@ export class AdminController {
       const admin = await Admin.findById(id);
       if (!admin) {
         throw new Error(`admin not found`);
+      }
+      if (admin.role === "superadmin") {
+        return res.status(400).json({
+          statusCode: 400,
+          message: "Daanggggg",
+        });
       }
 
       await Admin.findByIdAndDelete(id);
