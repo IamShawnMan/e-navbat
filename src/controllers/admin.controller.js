@@ -3,6 +3,7 @@ import { Admin } from "../models/admin.model.js";
 import { adminValidator } from "../utils/admin.validation.js";
 import { catchError } from "../utils/error-response.js";
 import { decode, encode } from "../utils/bcrypt-encrypt.js";
+import { successRes } from "../utils/success-response.js";
 import {
   generateAccessToekn,
   generateRefreshToekn,
@@ -13,16 +14,13 @@ export class AdminController {
     try {
       const { error, value } = adminValidator(req.body);
       if (error) {
-        throw new Error(`error on creating superadmin: ${error}`);
+        catchError(res, 400, "Superadmin validation failed");
       }
 
       const { username, password } = value;
       const superadmin = await Admin.findOne({ role: "superadmin" });
       if (superadmin) {
-        return res.status(409).json({
-          statusCode: 409,
-          message: "Super admin already exist",
-        });
+        catchError(res, 409, "Superadmin already exist");
       }
 
       const hashedPassword = await decode(password, 7);
@@ -31,22 +29,16 @@ export class AdminController {
         hashedPassword,
         role: "superadmin",
       });
-      return res.status(201).json({
-        statusCode: 201,
-        message: "success",
-        data: newAdmin,
-      });
+      successRes(res, 201, newAdmin);
     } catch (error) {
-      catchError(error, res);
+      catchError(res, 500, error.message);
     }
   }
   async createAdmin(req, res) {
     try {
-      // console.log(req.body);
-
       const { error, value } = adminValidator(req.body);
       if (error) {
-        throw new Error(`error on creating admin: ${error}`);
+        catchError(res, 400, "Admin validation failed");
       }
 
       const { username, password } = value;
@@ -58,25 +50,17 @@ export class AdminController {
         hashedPassword,
         role: "admin",
       });
-      return res.status(201).json({
-        statusCode: 201,
-        message: "success",
-        data: newAdmin,
-      });
+      successRes(res, 201, newAdmin);
     } catch (error) {
-      catchError(error, res);
+      catchError(res, 500, error.message);
     }
   }
-  async getAllAdmins(req, res) {
+  async getAllAdmins(_, res) {
     try {
       const admins = await Admin.find();
-      return res.status(200).json({
-        statusCode: 200,
-        message: `succes`,
-        data: admins,
-      });
+      successRes(res, 200, admins);
     } catch (error) {
-      catchError(error, res);
+      catchError(res, 500, error.message);
     }
   }
   async getAdminById(req, res) {
@@ -84,15 +68,11 @@ export class AdminController {
       const { id } = req.params;
       const admin = await Admin.findById(id);
       if (!admin) {
-        throw new Error(`admin not found`);
+        catchError(res, 404, "Admin not found");
       }
-      return res.status(200).json({
-        statusCode: 200,
-        message: `succes`,
-        data: admin,
-      });
+      successRes(res, 200, admin);
     } catch (error) {
-      catchError(error, res);
+      catchError(res, 500, error.message);
     }
   }
   async updateAdminById(req, res) {
@@ -100,18 +80,14 @@ export class AdminController {
       const id = req.params.id;
       const admin = await Admin.findById(id);
       if (!admin) {
-        throw new Error(`admin not found`);
+        catchError(res, 404, "Admin not found");
       }
       const updateAdmin = await Admin.findByIdAndUpdate(id, req.body, {
         new: true,
       });
-      return res.status(200).json({
-        statusCode: 200,
-        message: `succes`,
-        data: updateAdmin,
-      });
+      successRes(res, 200, updateAdmin);
     } catch (error) {
-      catchError(error, res);
+      catchError(res, 500, error.message);
     }
   }
   async deleteAdminById(req, res) {
@@ -119,23 +95,16 @@ export class AdminController {
       const id = req.params.id;
       const admin = await Admin.findById(id);
       if (!admin) {
-        throw new Error(`admin not found`);
+        catchError(res, 404, "Admin not found");
       }
       if (admin.role === "superadmin") {
-        return res.status(400).json({
-          statusCode: 400,
-          message: "Daanggggg",
-        });
+        catchError(res, 400, "Daaangggg! \n Superadmin can not be deleted!");
       }
 
       await Admin.findByIdAndDelete(id);
-      return res.status(200).json({
-        statusCode: 200,
-        message: `succes`,
-        data: {},
-      });
+      successRes(res, 200, {});
     } catch (error) {
-      catchError(error, res);
+      catchError(res, 500, error.message);
     }
   }
   async singinAdmin(req, res) {
@@ -143,27 +112,23 @@ export class AdminController {
       const { username, password } = req.body;
       const admin = await Admin.findOne({ username });
       if (!admin) {
-        throw new Error(`admin not found`);
+        catchError(res, 404, "Admin not found");
       }
       const ismatchPassword = await encode(password, admin.hashedPassword);
       if (!ismatchPassword) {
-        throw new Error(`invalid password`);
+        catchError(res, 400, "Invalid password");
       }
 
       const payload = { id: admin._id, role: admin.role };
       const accessToken = generateAccessToekn(payload);
       const refreshToken = generateRefreshToekn(payload);
 
-      return res.status(200).json({
-        statusCode: 200,
-        message: `succes`,
-        data: {
-          accessToken,
-          refreshToken,
-        },
+      successRes(res, 200, {
+        accessToken,
+        refreshToken,
       });
     } catch (error) {
-      catchError(error, res);
+      catchError(res, 500, error.message);
     }
   }
 }

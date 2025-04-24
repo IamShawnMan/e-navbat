@@ -6,12 +6,9 @@ export const SelfGuard = (req, res, next) => {
     if (user || user?.role === "superadmin" || user?.id == req.params.id) {
       next();
     } else {
-      res.status(403).json({
-        statusCode: 403,
-        message: "Forbidden user",
-      });
+      catchError(res, 403, "Forbidden user");
     }
   } catch (error) {
-    catchError(error, res);
+    catchError(res, 500, error.message);
   }
 };
