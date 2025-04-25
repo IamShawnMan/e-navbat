@@ -11,9 +11,10 @@ router
   .post("/superadmin", controller.createSuperAdmin)
   .post("/", JwtAuthGuard, SuperAdminGuard, controller.createAdmin)
   .post("/signin", controller.singinAdmin)
-  .get("/", SuperAdminGuard, controller.getAllAdmins)
-  .get("/:id", SelfGuard, controller.getAdminById)
-  .put("/:id", SelfGuard, controller.updateAdminById)
+  .post("/token", controller.accessToken)
+  .get("/", JwtAuthGuard, SuperAdminGuard, controller.getAllAdmins)
+  .get("/:id", JwtAuthGuard, SelfGuard, controller.getAdminById)
+  .put("/:id", JwtAuthGuard, SelfGuard, controller.updateAdminById)
   .delete("/:id", JwtAuthGuard, SuperAdminGuard, controller.deleteAdminById);
 
 export { router as adminRouter };

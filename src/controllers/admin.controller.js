@@ -29,7 +29,11 @@ export class AdminController {
         hashedPassword,
         role: "superadmin",
       });
-      successRes(res, 201, newAdmin);
+      res.status(201).json({
+        status: "success",
+        message: "Superadmin crested",
+        data: newAdmin,
+      });
     } catch (error) {
       catchError(res, 500, error.message);
     }
@@ -50,7 +54,11 @@ export class AdminController {
         hashedPassword,
         role: "admin",
       });
-      successRes(res, 201, newAdmin);
+      res.status(201).json({
+        status: "success",
+        message: "Superadmin crested",
+        data: newAdmin,
+      });
     } catch (error) {
       catchError(res, 500, error.message);
     }
@@ -58,7 +66,11 @@ export class AdminController {
   async getAllAdmins(_, res) {
     try {
       const admins = await Admin.find();
-      successRes(res, 200, admins);
+      res.status(200).json({
+        status: "success",
+        message: "All admins",
+        data: admins,
+      });
     } catch (error) {
       catchError(res, 500, error.message);
     }
@@ -122,11 +134,37 @@ export class AdminController {
       const payload = { id: admin._id, role: admin.role };
       const accessToken = generateAccessToekn(payload);
       const refreshToken = generateRefreshToekn(payload);
-
-      successRes(res, 200, {
-        accessToken,
-        refreshToken,
+      res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: true,
+        maxAge: 30 * 24 * 60 * 60 * 1000,
       });
+
+      successRes(res, 200, accessToken);
+    } catch (error) {
+      catchError(res, 500, error.message);
+    }
+  }
+  async accessToken(req, res) {
+    try {
+      const refreshToken = req.cookies.refreshToken;
+      if (!refreshToken) {
+        catchError(res, 401, "Refresh token not found");
+        const decodedToken = jwt.verify(
+          refreshToken,
+          process.env.REFRESH_TOKEN_KEY
+        );
+        if (!decodedToken) {
+          catchError(res, 401, "Refresh token expired");
+        }
+        const payload = { id: decodedToken.id, role: decodedToken.role };
+        const accessToken = generateAccessToekn(payload);
+        return res.status(200).json({
+          statusCode: 200,
+          message: "success",
+          data: accessToken,
+        });
+      }
     } catch (error) {
       catchError(res, 500, error.message);
     }

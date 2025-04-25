@@ -18,6 +18,7 @@ export const JwtAuthGuard = (req, res, next) => {
       catchError(res, 401, "Token expired");
     }
     req.user = decodedData;
+
     next();
   } catch (error) {
     catchError(res, 500, error.message);
