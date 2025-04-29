@@ -5,6 +5,8 @@ import { catchError } from "../utils/error-response.js";
 import { decode, encode } from "../utils/bcrypt-encrypt.js";
 import { successRes } from "../utils/success-response.js";
 import { transporter } from "../utils/mailer.js";
+import { otpGenerator } from "../utils/otp-generator.js";
+import { setCache, getCache } from "../utils/cache.js";
 import {
   generateAccessToekn,
   generateRefreshToekn,
@@ -131,19 +133,50 @@ export class AdminController {
       if (!ismatchPassword) {
         catchError(res, 400, "Invalid password");
       }
+
+      const otp = otpGenerator();
+
       const mailMessage = {
         from: process.env.SMTP_USER,
-        to: "dilshod7861@gmail.com",
+        to: "shodiyorergashev970@gmail.com",
         subject: "Full stack N20",
-        text: "Dangggg",
+        text: otp,
       };
       transporter.sendMail(mailMessage, function (err, info) {
         if (err) {
           catchError(res, 400, `Error on sending mail ${err}`);
         } else {
           console.log(info);
+          setCache(admin.username, otp);
         }
       });
+
+      return res.status(200).json({
+        statusCode: 200,
+        message: "success",
+        data: {},
+      });
+    } catch (error) {
+      catchError(res, 500, error.message);
+    }
+  }
+  async confirmSignInAdmin(req, res) {
+    try {
+      const { username, otp } = req.body;
+      const admin = await Admin.findOne({ username });
+
+      if (!admin) {
+        catchError(res, 404, "Admin not found");
+      }
+
+      const otpCache = getCache(username);
+
+      console.log(otpCache, otp);
+
+      if (!otpCache || otp != otpCache) {
+        catchError(res, 400, "OTP expired");
+      }
+
       const payload = { id: admin._id, role: admin.role };
       const accessToken = generateAccessToekn(payload);
       const refreshToken = generateRefreshToekn(payload);
@@ -153,7 +186,11 @@ export class AdminController {
         maxAge: 30 * 24 * 60 * 60 * 1000,
       });
 
-      successRes(res, 200, accessToken);
+      return res.status(200).json({
+        status: 200,
+        message: "success",
+        data: accessToken,
+      });
     } catch (error) {
       catchError(res, 500, error.message);
     }
