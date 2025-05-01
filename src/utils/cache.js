@@ -10,5 +10,4 @@ export const getCache = (key) => {
 
 export const setCache = (key, value) => {
   cache.set(key, value);
-  console.log(value);
 };
