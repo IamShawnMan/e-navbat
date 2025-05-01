@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import { config } from 'dotenv';
 import { connectDb } from './db/index.js';
 import { adminRouter } from './routes/admin.routes.js';
+import { logger } from './utils/logger/logger.js';
 
 config();
 
@@ -38,6 +39,4 @@ app.use((err, req, res, next) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}...`);
-});
+app.listen(PORT, logger.info(`Server started on port ${PORT}`));

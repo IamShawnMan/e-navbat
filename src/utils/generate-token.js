@@ -1,4 +1,4 @@
-import jwt from "jsonwebtoken";
+import jwt from 'jsonwebtoken';
 
 export const generateAccessToekn = (payload) => {
   return jwt.sign(payload, process.env.ACCESS_TOKEN_KEY, {

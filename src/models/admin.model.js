@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose";
+import { model, Schema } from 'mongoose';
 
 const adminSchema = new Schema(
   {
@@ -13,7 +13,7 @@ const adminSchema = new Schema(
     },
     role: {
       type: String,
-      enum: ["admin", "superadmin"],
+      enum: ['admin', 'superadmin'],
       required: true,
     },
   },
@@ -22,4 +22,4 @@ const adminSchema = new Schema(
   }
 );
 
-export const Admin = model("Admin", adminSchema);
+export const Admin = model('Admin', adminSchema);

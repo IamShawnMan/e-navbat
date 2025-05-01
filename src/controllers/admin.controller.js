@@ -1,81 +1,82 @@
-import jwt from "jsonwebtoken";
-import { Admin } from "../models/admin.model.js";
-import { adminValidator } from "../utils/admin.validation.js";
-import { catchError } from "../utils/error-response.js";
-import { decode, encode } from "../utils/bcrypt-encrypt.js";
-import { successRes } from "../utils/success-response.js";
-import { transporter } from "../utils/mailer.js";
-import { otpGenerator } from "../utils/otp-generator.js";
-import { setCache, getCache } from "../utils/cache.js";
+import jwt from 'jsonwebtoken';
+import { Admin } from '../models/admin.model.js';
+import { adminValidator } from '../utils/admin.validation.js';
+import { catchError } from '../utils/error-response.js';
+import { decode, encode } from '../utils/bcrypt-encrypt.js';
+import { successRes } from '../utils/success-response.js';
+import { transporter } from '../utils/mailer.js';
+import { otpGenerator } from '../utils/otp-generator.js';
+import { setCache, getCache } from '../utils/cache.js';
+import { refTokenWriteCookie } from '../utils/write-cookie.js';
 import {
   generateAccessToekn,
   generateRefreshToekn,
-} from "../utils/generate-token.js";
+} from '../utils/generate-token.js';
 
 export class AdminController {
   async createSuperAdmin(req, res) {
     try {
       const { error, value } = adminValidator(req.body);
       if (error) {
-        catchError(res, 400, "Superadmin validation failed");
+        return catchError(res, 400, 'Superadmin validation failed');
       }
 
       const { username, password } = value;
-      const superadmin = await Admin.findOne({ role: "superadmin" });
+      const superadmin = await Admin.findOne({ role: 'superadmin' });
       if (superadmin) {
-        catchError(res, 409, "Superadmin already exist");
+        return catchError(res, 409, 'Superadmin already exist');
       }
 
       const hashedPassword = await decode(password, 7);
       const newAdmin = await Admin.create({
         username,
         hashedPassword,
-        role: "superadmin",
+        role: 'superadmin',
       });
       res.status(201).json({
-        status: "success",
-        message: "Superadmin crested",
+        status: 'success',
+        message: 'Superadmin crested',
         data: newAdmin,
       });
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
   async createAdmin(req, res) {
     try {
       const { error, value } = adminValidator(req.body);
       if (error) {
-        catchError(res, 400, "Admin validation failed");
+        return catchError(res, 400, 'Admin validation failed');
       }
 
       const { username, password } = value;
-      const superadmin = await Admin.findOne({ role: "superadmin" });
+      const superadmin = await Admin.findOne({ role: 'superadmin' });
 
       const hashedPassword = await decode(password, 7);
       const newAdmin = await Admin.create({
         username,
         hashedPassword,
-        role: "admin",
+        role: 'admin',
       });
       res.status(201).json({
-        status: "success",
-        message: "Superadmin crested",
+        status: 'success',
+        message: 'Superadmin crested',
         data: newAdmin,
       });
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
   async getAllAdmins(_, res) {
     try {
       const admins = await Admin.find();
       res.status(200).json({
-        status: "success",
-        message: "All admins",
+        status: 'success',
+        message: 'All admins',
         data: admins,
       });
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
   async getAdminById(req, res) {
@@ -83,11 +84,11 @@ export class AdminController {
       const { id } = req.params;
       const admin = await Admin.findById(id);
       if (!admin) {
-        catchError(res, 404, "Admin not found");
+        return catchError(res, 404, 'Admin not found');
       }
       successRes(res, 200, admin);
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
   async updateAdminById(req, res) {
@@ -95,14 +96,14 @@ export class AdminController {
       const id = req.params.id;
       const admin = await Admin.findById(id);
       if (!admin) {
-        catchError(res, 404, "Admin not found");
+        return catchError(res, 404, 'Admin not found');
       }
       const updateAdmin = await Admin.findByIdAndUpdate(id, req.body, {
         new: true,
       });
       successRes(res, 200, updateAdmin);
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
   async deleteAdminById(req, res) {
@@ -110,16 +111,20 @@ export class AdminController {
       const id = req.params.id;
       const admin = await Admin.findById(id);
       if (!admin) {
-        catchError(res, 404, "Admin not found");
+        return catchError(res, 404, 'Admin not found');
       }
-      if (admin.role === "superadmin") {
-        catchError(res, 400, "Daaangggg! \n Superadmin can not be deleted!");
+      if (admin.role === 'superadmin') {
+        return catchError(
+          res,
+          400,
+          'Daaangggg! \n Superadmin can not be deleted!'
+        );
       }
 
       await Admin.findByIdAndDelete(id);
       successRes(res, 200, {});
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
   async singinAdmin(req, res) {
@@ -127,24 +132,24 @@ export class AdminController {
       const { username, password } = req.body;
       const admin = await Admin.findOne({ username });
       if (!admin) {
-        catchError(res, 404, "Admin not found");
+        return catchError(res, 404, 'Admin not found');
       }
       const ismatchPassword = await encode(password, admin.hashedPassword);
       if (!ismatchPassword) {
-        catchError(res, 400, "Invalid password");
+        return catchError(res, 400, 'Invalid password');
       }
 
       const otp = otpGenerator();
 
       const mailMessage = {
         from: process.env.SMTP_USER,
-        to: "shodiyorergashev970@gmail.com",
-        subject: "Full stack N20",
+        to: 'shodiyorergashev970@gmail.com',
+        subject: 'Full stack N20',
         text: otp,
       };
       transporter.sendMail(mailMessage, function (err, info) {
         if (err) {
-          catchError(res, 400, `Error on sending mail ${err}`);
+          return catchError(res, 400, `Error on sending mail ${err}`);
         } else {
           console.log(info);
           setCache(admin.username, otp);
@@ -153,11 +158,11 @@ export class AdminController {
 
       return res.status(200).json({
         statusCode: 200,
-        message: "success",
+        message: 'success',
         data: {},
       });
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
   async confirmSignInAdmin(req, res) {
@@ -166,7 +171,7 @@ export class AdminController {
       const admin = await Admin.findOne({ username });
 
       if (!admin) {
-        catchError(res, 404, "Admin not found");
+        return catchError(res, 404, 'Admin not found');
       }
 
       const otpCache = getCache(username);
@@ -174,72 +179,69 @@ export class AdminController {
       console.log(otpCache, otp);
 
       if (!otpCache || otp != otpCache) {
-        catchError(res, 400, "OTP expired");
+        return catchError(res, 400, 'OTP expired');
       }
 
       const payload = { id: admin._id, role: admin.role };
       const accessToken = generateAccessToekn(payload);
       const refreshToken = generateRefreshToekn(payload);
-      res.cookie("refreshToken", refreshToken, {
-        httpOnly: true,
-        secure: true,
-        maxAge: 30 * 24 * 60 * 60 * 1000,
-      });
+
+      refTokenWriteCookie(res, 'refreshTokenAdmin', refreshToken);
 
       return res.status(200).json({
         status: 200,
-        message: "success",
+        message: 'success',
         data: accessToken,
       });
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
   async signOutAdmin(req, res) {
     try {
-      const refreshToken = req.cookies.refreshToken;
+      const refreshToken = req.cookies.refreshTokenAdmin;
       if (!refreshToken) {
-        catchError(res, 401, "Refresh token not found");
+        return catchError(res, 401, 'Refresh token not found');
       }
       const decodedToken = jwt.verify(
         refreshToken,
         process.env.REFRESH_TOKEN_KEY
       );
       if (!decodedToken) {
-        catchError(res, 401, "Refresh token expired");
+        return catchError(res, 401, 'Refresh token expired');
       }
-      res.clearCookie("refreshToken");
+      res.clearCookie('refreshTokenAdmin');
       return res.status(200).json({
         statusCode: 200,
-        message: "success",
+        message: 'success',
         data: {},
       });
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
   async accessToken(req, res) {
     try {
-      const refreshToken = req.cookies.refreshToken;
+      const refreshToken = req.cookies.refreshTokenAdmin;
       if (!refreshToken) {
-        catchError(res, 401, "Refresh token not found");
+        return catchError(res, 401, 'Refresh token not found');
       }
       const decodedToken = jwt.verify(
         refreshToken,
         process.env.REFRESH_TOKEN_KEY
       );
       if (!decodedToken) {
-        catchError(res, 401, "Refresh token expired");
+        return catchError(res, 401, 'Refresh token expired');
       }
       const payload = { id: decodedToken.id, role: decodedToken.role };
       const accessToken = generateAccessToekn(payload);
       return res.status(200).json({
         statusCode: 200,
-        message: "success",
+        message: 'success',
         data: accessToken,
       });
     } catch (error) {
-      catchError(res, 500, error.message);
+      return catchError(res, 500, error.message);
     }
   }
 }
